@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and ideas
+    url: https://github.com/Kronbii/notes-craft/discussions
+    about: Ask a question, share how you use NotesCraft, or talk an idea through.
+  - name: Report a security problem
+    url: https://github.com/Kronbii/notes-craft/security/advisories/new
+    about: Please report security problems privately.

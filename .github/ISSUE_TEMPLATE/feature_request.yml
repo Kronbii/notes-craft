@@ -1,0 +1,34 @@
+name: Suggest a feature
+description: An idea to make NotesCraft better.
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What would you like to do?
+      description: The task or problem, in your own words. What's hard or impossible today?
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: How could it work?
+      description: Your idea for how it could look or behave.
+  - type: textarea
+    id: elsewhere
+    attributes:
+      label: Seen it elsewhere?
+      description: If GoodNotes, Notability or another app does this well, describe or show how.
+  - type: input
+    id: app-version
+    attributes:
+      label: NotesCraft version
+      placeholder: 1.0.0 (1)
+  - type: input
+    id: ipados
+    attributes:
+      label: iPadOS version
+  - type: input
+    id: device
+    attributes:
+      label: Device

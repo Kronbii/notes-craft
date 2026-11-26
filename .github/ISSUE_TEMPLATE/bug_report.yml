@@ -1,0 +1,68 @@
+name: Report a problem
+description: Something in NotesCraft doesn't work as it should.
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! The fastest way here is NotesCraft › Settings › Help and feedback › **Report a problem**, which fills in your version and device.
+        Please check you have the [latest release](https://github.com/Kronbii/notes-craft/releases/latest) first.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What went wrong, and what did you expect instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: The smallest set of steps that makes it happen. Does it happen every time?
+      placeholder: |
+        1. Open a canvas
+        2. Write a word with the pen
+        3. ...
+    validations:
+      required: true
+  - type: input
+    id: app-version
+    attributes:
+      label: NotesCraft version
+      description: Settings › About › Version
+      placeholder: 1.0.0 (1)
+    validations:
+      required: true
+  - type: input
+    id: ipados
+    attributes:
+      label: iPadOS version
+      placeholder: "26.6"
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Device
+      description: The model, e.g. "iPad (10th generation)" or "iPad13,18".
+    validations:
+      required: true
+  - type: dropdown
+    id: input
+    attributes:
+      label: Writing with
+      options:
+        - Apple Pencil
+        - Finger ("Draw with finger" on)
+        - Not about writing
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics
+      description: Optional. Settings › Help and feedback › Copy diagnostics, then paste here. It contains versions and counts, never your notes.
+      render: text
+  - type: textarea
+    id: attachments
+    attributes:
+      label: Screenshots, recordings or crash logs
+      description: Optional. Crash logs are in iPad Settings › Privacy & Security › Analytics & Improvements › Analytics Data (entries starting with "NotesCraft"). Please don't attach notes you'd rather keep private.
