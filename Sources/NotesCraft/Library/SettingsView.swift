@@ -11,6 +11,7 @@ struct SettingsView: View {
     @State private var working = false
     @State private var versionTaps = 0
     @State private var copiedDiagnostics = false
+    @State private var transcriptLanguages: [Locale] = []
 
     var body: some View {
         @Bindable var settings = settings
@@ -29,6 +30,20 @@ struct SettingsView: View {
                     Text("Writing")
                 } footer: {
                     Text("With “Draw with finger” off, your finger scrolls and zooms while Apple Pencil writes. Hold the pen still at the end of a stroke to turn it into a clean line, circle or rectangle. Scribble back and forth over writing to erase it.")
+                }
+
+                Section {
+                    Toggle("Transcribe recordings", isOn: $settings.transcribeRecordings)
+                    Picker("Transcript language", selection: $settings.transcriptionLanguage) {
+                        Text("Same as the iPad").tag("")
+                        ForEach(transcriptLanguages, id: \.identifier) { locale in
+                            Text(SpeechEngine.name(locale)).tag(locale.identifier)
+                        }
+                    }
+                } header: {
+                    Text("Recordings")
+                } footer: {
+                    Text("When a recording stops, NotesCraft turns it into text you can read and search. It happens on this iPad; the first time, iPadOS downloads the language model from Apple.")
                 }
 
                 Section("Gestures") {
@@ -140,6 +155,7 @@ struct SettingsView: View {
             .scrollContentBackground(.hidden)
             .background(Theme.background)
             .navigationTitle("Settings")
+            .task { transcriptLanguages = await SpeechEngine.supportedLocales() }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {

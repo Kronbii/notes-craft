@@ -46,6 +46,9 @@ final class AppSettings {
     var pencilDoubleTap: PencilDoubleTapAction { didSet { defaults.set(pencilDoubleTap.rawValue, forKey: "pencilDoubleTap") } }
     var holdToSnapShapes: Bool { didSet { defaults.set(holdToSnapShapes, forKey: "holdToSnapShapes") } }
     var scribbleToErase: Bool { didSet { defaults.set(scribbleToErase, forKey: "scribbleToErase") } }
+    var transcribeRecordings: Bool { didSet { defaults.set(transcribeRecordings, forKey: "transcribeRecordings") } }
+    /// Locale identifier for transcripts; empty means the iPad's language.
+    var transcriptionLanguage: String { didSet { defaults.set(transcriptionLanguage, forKey: "transcriptionLanguage") } }
     var straightHighlighter: Bool { didSet { defaults.set(straightHighlighter, forKey: "straightHighlighter") } }
     var eraserAutoDeselect: Bool { didSet { defaults.set(eraserAutoDeselect, forKey: "eraserAutoDeselect") } }
     var tapGesturesUndo: Bool { didSet { defaults.set(tapGesturesUndo, forKey: "tapGesturesUndo") } }
@@ -67,6 +70,7 @@ final class AppSettings {
             "drawWithFinger": false,
             "holdToSnapShapes": true,
             "scribbleToErase": true,
+            "transcribeRecordings": true,
             "straightHighlighter": true,
             "eraserAutoDeselect": false,
             "tapGesturesUndo": true,
@@ -81,6 +85,8 @@ final class AppSettings {
         pencilDoubleTap = PencilDoubleTapAction(rawValue: defaults.string(forKey: "pencilDoubleTap") ?? "") ?? .system
         holdToSnapShapes = defaults.bool(forKey: "holdToSnapShapes")
         scribbleToErase = defaults.bool(forKey: "scribbleToErase")
+        transcribeRecordings = defaults.bool(forKey: "transcribeRecordings")
+        transcriptionLanguage = defaults.string(forKey: "transcriptionLanguage") ?? ""
         straightHighlighter = defaults.bool(forKey: "straightHighlighter")
         eraserAutoDeselect = defaults.bool(forKey: "eraserAutoDeselect")
         tapGesturesUndo = defaults.bool(forKey: "tapGesturesUndo")

@@ -47,6 +47,14 @@ struct EditorScreen: View {
                         .frame(width: compact ? 260 : 300)
                         .transition(.move(edge: .trailing).combined(with: .opacity))
                     }
+                    if model.showTranscript {
+                        Rectangle().fill(Theme.hair).frame(width: 0.5)
+                        TranscriptPanel(model: model, onClose: {
+                            withAnimation(.spring(duration: 0.3)) { model.showTranscript = false }
+                        })
+                        .frame(width: compact ? 280 : 320)
+                        .transition(.move(edge: .trailing).combined(with: .opacity))
+                    }
                 }
                 overlays
             }
@@ -54,6 +62,7 @@ struct EditorScreen: View {
         .background(Theme.desk.ignoresSafeArea())
         .background(Theme.background)
         .animation(.spring(duration: 0.32), value: model.showNavigator)
+        .animation(.spring(duration: 0.32), value: model.showTranscript)
         .animation(.spring(duration: 0.32), value: model.showAudioBar)
         .onChange(of: scenePhase) { _, phase in
             if phase != .active { model.saveForBackground() }

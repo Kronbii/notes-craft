@@ -158,7 +158,18 @@ final class EditorModel {
     @ObservationIgnored private lazy var pdfSearcher = PDFTextSearcher(folder: StoragePaths.assets(document.id))
     var isReadOnly = false
     var isReplaying = false
-    var showFind = false
+    var showFind = false {
+        didSet { if showFind { showTranscript = false } }
+    }
+    /// The transcript panel (beside the canvas, like Find).
+    var showTranscript = false {
+        didSet { if showTranscript { showFind = false } }
+    }
+    /// Transcriptions waiting or running, by recording (absent when done).
+    var transcriptionStatus: [UUID: TranscriptionStatus] = [:]
+    @ObservationIgnored private var transcriptionQueue: [(id: UUID, locale: Locale?)] = []
+    @ObservationIgnored private var transcriptionTask: Task<Void, Never>?
+    @ObservationIgnored private var transcribingID: UUID?
     var rulerActive = false {
         didSet { canvas?.canvas.isRulerActive = rulerActive }
     }
@@ -619,6 +630,9 @@ final class EditorModel {
             self.selectedRecordingID = recording.id
             self.saveNow()
             self.showToast("Recording saved · \(recording.duration.clock)")
+            if AppSettings.shared.transcribeRecordings {
+                self.transcribe(recording.id)
+            }
         }
         audio.onRecordingDiscarded = { [weak self] id in
             guard let self else { return }
@@ -639,7 +653,10 @@ final class EditorModel {
 
     private func storeRecording(_ recording: Recording) {
         if let i = document.content.recordings.firstIndex(where: { $0.id == recording.id }) {
-            document.content.recordings[i] = recording
+            var updated = recording
+            // The recorder knows nothing of transcripts; keep the one we have.
+            if updated.transcript == nil { updated.transcript = document.content.recordings[i].transcript }
+            document.content.recordings[i] = updated
         } else {
             document.content.recordings.append(recording)
         }
@@ -714,6 +731,87 @@ final class EditorModel {
         showAudioBar = false
     }
 
+    // MARK: - Transcripts
+
+    /// Language transcripts are made in: the one chosen in Settings, or the iPad's.
+    var transcriptionLocale: Locale {
+        let id = AppSettings.shared.transcriptionLanguage
+        return id.isEmpty ? Locale.current : Locale(identifier: id)
+    }
+
+    /// Queues a recording for transcription on this iPad (one at a time).
+    func transcribe(_ id: UUID, locale: Locale? = nil) {
+        guard document.content.recordings.contains(where: { $0.id == id }), transcribingID != id,
+              !transcriptionQueue.contains(where: { $0.id == id }) else { return }
+        transcriptionQueue.append((id, locale))
+        transcriptionStatus[id] = .waiting
+        startNextTranscription()
+    }
+
+    func cancelTranscription(_ id: UUID) {
+        transcriptionQueue.removeAll { $0.id == id }
+        if transcribingID == id { transcriptionTask?.cancel() }
+        transcriptionStatus[id] = nil
+    }
+
+    private func startNextTranscription() {
+        guard transcriptionTask == nil, !closed, !transcriptionQueue.isEmpty else { return }
+        let next = transcriptionQueue.removeFirst()
+        guard let recording = document.content.recordings.first(where: { $0.id == next.id }) else {
+            transcriptionStatus[next.id] = nil
+            startNextTranscription()
+            return
+        }
+        let id = recording.id
+        let file = document.assets.url(for: recording.asset)
+        let locale = next.locale ?? transcriptionLocale
+        transcribingID = id
+        transcriptionStatus[id] = .working(0)
+        let owner = WeakReference(self)
+        transcriptionTask = Task { [weak self] in
+            do {
+                let transcript = try await SpeechEngine.transcribe(file: file, locale: locale, duration: recording.duration) { fraction, downloading in
+                    Task { @MainActor in
+                        guard let model = owner.value, model.transcribingID == id else { return }
+                        model.transcriptionStatus[id] = downloading ? .downloading(fraction) : .working(fraction)
+                    }
+                }
+                try Task.checkCancellation()
+                self?.storeTranscript(transcript, for: id)
+            } catch is CancellationError {
+                self?.transcriptionStatus[id] = nil
+            } catch {
+                log.error("transcription failed: \(error.localizedDescription, privacy: .public)")
+                self?.transcriptionStatus[id] = .failed(error.localizedDescription)
+            }
+            guard let self else { return }
+            self.transcriptionTask = nil
+            self.transcribingID = nil
+            self.startNextTranscription()
+        }
+    }
+
+    private func storeTranscript(_ transcript: Transcript, for id: UUID) {
+        guard !closed, let i = document.content.recordings.firstIndex(where: { $0.id == id }) else { return }
+        document.content.recordings[i].transcript = transcript
+        document.markContentChanged()
+        transcriptionStatus[id] = nil
+        scheduleSave()
+        log.notice("transcript ready: \(transcript.segments.count, privacy: .public) segments")
+        if !showTranscript { showToast("Transcript ready · \(document.content.recordings[i].title)") }
+        if showFind { runFind() }
+    }
+
+    /// Plays a recording from a moment (a transcript line or a search result).
+    func playRecording(_ id: UUID, at time: TimeInterval) {
+        guard let recording = recordings.first(where: { $0.id == id }) else { return }
+        selectedRecordingID = id
+        if audio.playingID != id { play(recording) } else { showAudioBar = true }
+        audio.seek(to: time)
+        if !audio.isPlaying { audio.play(recording, from: time) }
+        canvas.updateReplay(time: time)
+    }
+
     func renameRecording(_ id: UUID, to title: String) {
         guard let i = document.content.recordings.firstIndex(where: { $0.id == id }) else { return }
         let clean = title.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -724,6 +822,7 @@ final class EditorModel {
     }
 
     func deleteRecording(_ id: UUID) {
+        cancelTranscription(id)
         if audio.playingID == id { closeAudioBar() }
         document.content.recordings.removeAll { $0.id == id }
         document.markContentChanged()
@@ -824,10 +923,11 @@ final class EditorModel {
             }
         }
         let searcher = pdfSearcher
+        let recordingsSnapshot = recordings
         findTask = Task {
             try? await Task.sleep(for: .milliseconds(180))
             guard !Task.isCancelled else { return }
-            var results = InlineSearcher.search(q, pages: pages)
+            var results = InlineSearcher.search(q, pages: pages) + InlineSearcher.search(q, recordings: recordingsSnapshot)
             if !refs.isEmpty {
                 results += await searcher.search(q, pages: refs)
             }
@@ -836,7 +936,7 @@ final class EditorModel {
             if results.isEmpty, words.count > 1 {
                 var perWord: [[FindResult]] = []
                 for word in words {
-                    var hits = InlineSearcher.search(word, pages: pages)
+                    var hits = InlineSearcher.search(word, pages: pages) + InlineSearcher.search(word, recordings: recordingsSnapshot)
                     if !refs.isEmpty { hits += await searcher.search(word, pages: refs) }
                     perWord.append(hits)
                 }
@@ -847,8 +947,10 @@ final class EditorModel {
             results.sort { ($0.pageIndex, $0.order) < ($1.pageIndex, $1.order) }
             findResults = results
             isSearching = false
-            // Start at the first match at or after the page being read.
-            if let first = results.firstIndex(where: { $0.pageIndex >= currentPage }) ?? (results.isEmpty ? nil : 0) {
+            // Start at the first match at or after the page being read (matches in
+            // recordings come last and never start playing by themselves).
+            if let first = results.firstIndex(where: { $0.pageIndex >= currentPage && $0.recordingID == nil })
+                ?? results.firstIndex(where: { $0.recordingID == nil }) {
                 currentFindIndex = first
                 // Bring the first match into view if it is off screen.
                 let r = results[first]
@@ -856,7 +958,7 @@ final class EditorModel {
                     .map { canvas.visibleDocRect.insetBy(dx: 0, dy: 40).contains($0) } ?? false
                 highlightFindResults(scroll: !visible)
             } else {
-                currentFindIndex = nil
+                currentFindIndex = results.isEmpty ? nil : 0
                 canvas.showHighlights([], current: nil)
             }
         }
@@ -893,6 +995,11 @@ final class EditorModel {
         canvas.showHighlights(all, current: current)
         guard scroll, let index = currentFindIndex, findResults.indices.contains(index) else { return }
         let result = findResults[index]
+        if let recordingID = result.recordingID, let time = result.time {
+            // A match in a recording: play it from there.
+            playRecording(recordingID, at: max(0, time - 0.5))
+            return
+        }
         if let current {
             canvas.scrollToDocRect(current, animated: true, align: .center)
         } else {
@@ -914,6 +1021,8 @@ final class EditorModel {
 
     func close() {
         guard !closed else { return }
+        transcriptionQueue.removeAll()
+        transcriptionTask?.cancel()
         if audio.recordState != .idle { audio.stopRecording() }
         audio.tearDown()
         indexer.cancel()
