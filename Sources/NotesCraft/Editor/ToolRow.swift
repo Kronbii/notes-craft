@@ -23,6 +23,7 @@ struct ToolRow: View {
 
     private var row: some View {
         ToolbarLayout {
+            FavoritesCapsule(model: model)
             toolsCapsule
             ContextualTools(model: model)
                 .padding(.horizontal, 8)
@@ -97,6 +98,7 @@ struct ToolRow: View {
 struct ToolbarLayout: Layout {
     var gap: CGFloat = 10
 
+    /// Subviews: favorites, tools, the active tool's options.
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
         let sizes = subviews.map { $0.sizeThatFits(.unspecified) }
         let natural = sizes.reduce(0) { $0 + $1.width } + gap * CGFloat(max(0, sizes.count - 1))
@@ -104,17 +106,108 @@ struct ToolbarLayout: Layout {
         return CGSize(width: max(proposal.width ?? natural, natural), height: height)
     }
 
+    /// The tools stay centered (so they never move when switching), favorites
+    /// sit to their left and options to their right; shifted only if needed.
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        guard let tools = subviews.first else { return }
+        guard subviews.count >= 2 else { return }
+        let favorites = subviews[0], tools = subviews[1]
+        let favSize = favorites.sizeThatFits(.unspecified)
         let toolSize = tools.sizeThatFits(.unspecified)
-        let extra = subviews.count > 1 ? subviews[1].sizeThatFits(.unspecified) : .zero
+        let extra = subviews.count > 2 ? subviews[2].sizeThatFits(.unspecified) : .zero
+        let leftNeeded = favSize.width > 0 ? favSize.width + gap : 0
+        let rightNeeded = extra.width > 0 ? gap + extra.width : 0
         var x = bounds.midX - toolSize.width / 2
-        let needed = toolSize.width + (extra.width > 0 ? gap + extra.width : 0)
-        if x + needed > bounds.maxX { x = max(bounds.minX, bounds.maxX - needed) }
-        tools.place(at: CGPoint(x: x, y: bounds.midY), anchor: .leading, proposal: ProposedViewSize(toolSize))
-        if subviews.count > 1 {
-            subviews[1].place(at: CGPoint(x: x + toolSize.width + gap, y: bounds.midY), anchor: .leading, proposal: ProposedViewSize(extra))
+        if x + toolSize.width + rightNeeded > bounds.maxX { x = bounds.maxX - toolSize.width - rightNeeded }
+        if x - leftNeeded < bounds.minX { x = bounds.minX + leftNeeded }
+        if favSize.width > 0 {
+            favorites.place(at: CGPoint(x: x - leftNeeded, y: bounds.midY), anchor: .leading, proposal: ProposedViewSize(favSize))
         }
+        tools.place(at: CGPoint(x: x, y: bounds.midY), anchor: .leading, proposal: ProposedViewSize(toolSize))
+        if subviews.count > 2 {
+            subviews[2].place(at: CGPoint(x: x + toolSize.width + gap, y: bounds.midY), anchor: .leading, proposal: ProposedViewSize(extra))
+        }
+    }
+}
+
+/// Saved pens and highlighters, one tap away; "+" saves the current one.
+struct FavoritesCapsule: View {
+    @Bindable var model: EditorModel
+
+    var body: some View {
+        HStack(spacing: 0) {
+            ForEach(model.favorites) { fav in
+                FavoriteChip(favorite: fav, selected: model.tools.activeFavoriteID == fav.id && model.tools.tool == fav.tool) {
+                    model.useFavorite(fav)
+                }
+                .contextMenu {
+                    Button {
+                        model.moveFavorite(fav.id, by: -1)
+                    } label: {
+                        Label("Move left", systemImage: "arrow.left")
+                    }
+                    Button {
+                        model.moveFavorite(fav.id, by: 1)
+                    } label: {
+                        Label("Move right", systemImage: "arrow.right")
+                    }
+                    Button(role: .destructive) {
+                        model.removeFavorite(fav.id)
+                    } label: {
+                        Label("Remove from favorites", systemImage: "star.slash")
+                    }
+                }
+            }
+            Button {
+                model.saveCurrentAsFavorite()
+            } label: {
+                Image(systemName: model.favorites.isEmpty ? "star" : "plus")
+                    .font(.system(size: model.favorites.isEmpty ? 16 : 14, weight: .semibold))
+                    .foregroundStyle(Theme.ink2)
+                    .frame(width: 36, height: 44)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .disabled(model.tools.currentSetup == nil)
+            .opacity(model.tools.currentSetup == nil ? 0.4 : 1)
+            .accessibilityLabel("Save this pen as a favorite")
+            .help("Save this pen as a favorite")
+        }
+        .padding(.horizontal, 6)
+        .frame(height: 50)
+        .glassCapsule()
+    }
+}
+
+struct FavoriteChip: View {
+    let favorite: FavoritePen
+    let selected: Bool
+    var action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            ZStack {
+                Circle()
+                    .strokeBorder(selected ? Theme.ink : .clear, lineWidth: 2)
+                    .frame(width: 34, height: 34)
+                Circle()
+                    .fill(favorite.color.withAlpha(favorite.tool == .highlighter ? 0.55 : 1).color)
+                    .frame(width: 26, height: 26)
+                    .overlay(Circle().strokeBorder(Theme.ink.opacity(0.2), lineWidth: 0.75))
+                Image(systemName: favorite.tool == .highlighter ? "highlighter" : favorite.style.symbol)
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(favorite.color.luminance > 0.6 ? Color.black.opacity(0.75) : Color.white)
+                // Thickness, as a short bar under the dot.
+                Capsule()
+                    .fill(Theme.ink2)
+                    .frame(width: 12, height: min(4, max(1.2, favorite.width / (favorite.tool == .highlighter ? 6 : 1.2))))
+                    .offset(y: 20)
+            }
+            .frame(width: 40, height: 50)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Favorite: \(favorite.title)")
+        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }
 
@@ -168,11 +261,12 @@ struct ContextualTools: View {
         let ranked = preset.widths.enumerated().sorted { $0.element < $1.element }.map(\.offset)
         return HStack(spacing: 2) {
             ForEach(preset.colors.indices, id: \.self) { i in
-                ColorDot(color: preset.colors[i], selected: preset.colorIndex == i) {
-                    if preset.colorIndex == i {
+                ColorDot(color: preset.colors[i], selected: preset.colorIndex == i && model.tools.activeFavorite == nil) {
+                    if preset.colorIndex == i, model.tools.activeFavorite == nil {
                         model.editingColorSlot = i
                     } else {
                         var t = model.tools
+                        t.activeFavoriteID = nil
                         t.activePreset?.colorIndex = i
                         model.tools = t
                     }
@@ -196,11 +290,12 @@ struct ContextualTools: View {
             }
             Rectangle().fill(Theme.hair).frame(width: 1, height: 22).padding(.horizontal, 6)
             ForEach(preset.widths.indices, id: \.self) { i in
-                WidthDot(rank: ranked.firstIndex(of: i) ?? i, selected: preset.widthIndex == i, highlighter: tool == .highlighter) {
-                    if preset.widthIndex == i {
+                WidthDot(rank: ranked.firstIndex(of: i) ?? i, selected: preset.widthIndex == i && model.tools.activeFavorite == nil, highlighter: tool == .highlighter) {
+                    if preset.widthIndex == i, model.tools.activeFavorite == nil {
                         model.editingWidthSlot = i
                     } else {
                         var t = model.tools
+                        t.activeFavoriteID = nil
                         t.activePreset?.widthIndex = i
                         model.tools = t
                     }

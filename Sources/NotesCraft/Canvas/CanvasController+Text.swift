@@ -213,7 +213,7 @@ extension CanvasController: UITextViewDelegate {
     /// covered by the keyboard.
     func ensureVisible(docRect: CGRect, animated: Bool) {
         let r = docToContent(docRect)
-        let visibleHeight = max(canvas.bounds.height - keyboardInset, 120)
+        let visibleHeight = max(canvas.bounds.height - max(keyboardInset, zoomPanelInset), 120)
         let margin: CGFloat = 48
         var y = canvas.contentOffset.y
         if r.maxY > y + visibleHeight - margin {

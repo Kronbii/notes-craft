@@ -147,6 +147,24 @@ struct InkPreset: Codable, Equatable {
     }
 }
 
+/// A saved pen or highlighter setup, one tap away (Notability's favorites).
+struct FavoritePen: Codable, Equatable, Identifiable {
+    var id = UUID()
+    var tool: ToolKind
+    var style: PenStyle
+    var color: RGBA
+    var width: Double
+
+    var title: String {
+        let kind = tool == .highlighter ? "Highlighter" : style.title
+        return "\(kind), \(ColorNames.name(for: color)), \(String(format: "%.1f", width)) pt"
+    }
+
+    func matches(_ other: FavoritePen) -> Bool {
+        tool == other.tool && style == other.style && color == other.color && abs(width - other.width) < 0.01
+    }
+}
+
 struct ToolState: Codable, Equatable {
     var tool: ToolKind = .pen
     var previousTool: ToolKind = .highlighter
@@ -162,8 +180,33 @@ struct ToolState: Codable, Equatable {
     var textFamily: TextFontFamily = .system
     var textSize: Double = 17
     var textColor: RGBA = RGBA(hex: "#111413")!
+    /// Saved pens and highlighters, and the one in use (if any).
+    var favorites: [FavoritePen]?
+    var activeFavoriteID: UUID?
 
     static let eraserWidths: [Double] = [8, 20, 44]
+    static let maxFavorites = 8
+
+    /// The favorite being written with, when it belongs to the current tool.
+    var activeFavorite: FavoritePen? {
+        guard let id = activeFavoriteID, let fav = favorites?.first(where: { $0.id == id }), fav.tool == tool else { return nil }
+        return fav
+    }
+
+    /// The pen or highlighter as it is set up right now, as a favorite.
+    var currentSetup: FavoritePen? {
+        if let fav = activeFavorite { return FavoritePen(tool: fav.tool, style: fav.style, color: fav.color, width: fav.width) }
+        switch tool {
+        case .pen: return FavoritePen(tool: .pen, style: penStyle, color: pen.color, width: pen.width)
+        case .highlighter: return FavoritePen(tool: .highlighter, style: penStyle, color: highlighter.color, width: highlighter.width)
+        default: return nil
+        }
+    }
+
+    /// The color drawn with right now (a favorite's, or the selected slot's).
+    var effectiveColor: RGBA? {
+        activeFavorite?.color ?? activePreset?.color
+    }
 
     var eraserWidth: Double {
         ToolState.eraserWidths[min(max(eraserWidthIndex, 0), ToolState.eraserWidths.count - 1)]
@@ -211,13 +254,18 @@ struct ToolState: Codable, Equatable {
     // MARK: PencilKit tools
 
     func pkTool(for kind: ToolKind) -> PKTool? {
+        if let fav = activeFavorite, fav.tool == kind {
+            return fav.tool == .highlighter
+                ? inkingTool(.marker, color: fav.color, width: fav.width)
+                : inkingTool(fav.style.inkType, color: fav.color, width: fav.width, nibAngle: fav.style.nibAngle)
+        }
         switch kind {
         case .pen:
-            return inkingTool(penStyle.inkType, preset: pen, nibAngle: penStyle.nibAngle)
+            return inkingTool(penStyle.inkType, color: pen.color, width: pen.width, nibAngle: penStyle.nibAngle)
         case .highlighter:
-            return inkingTool(.marker, preset: highlighter)
+            return inkingTool(.marker, color: highlighter.color, width: highlighter.width)
         case .shape:
-            return inkingTool(.monoline, preset: shape)
+            return inkingTool(.monoline, color: shape.color, width: shape.width)
         case .eraser:
             switch eraserMode {
             case .stroke: return PKEraserTool(.vector)
@@ -228,10 +276,10 @@ struct ToolState: Codable, Equatable {
         }
     }
 
-    private func inkingTool(_ type: PKInk.InkType, preset: InkPreset, nibAngle: CGFloat? = nil) -> PKInkingTool {
+    private func inkingTool(_ type: PKInk.InkType, color rgba: RGBA, width w: Double, nibAngle: CGFloat? = nil) -> PKInkingTool {
         let range = type.validWidthRange
-        let width = min(max(preset.width, range.lowerBound), range.upperBound)
-        var color = UIColor(preset.color)
+        let width = min(max(w, range.lowerBound), range.upperBound)
+        var color = UIColor(rgba)
         if type == .marker {
             // PencilKit applies its own transparency to markers; keep colors opaque.
             color = color.withAlphaComponent(1)

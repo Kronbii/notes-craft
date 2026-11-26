@@ -46,9 +46,68 @@ final class EditorModel {
     var tools: ToolState {
         didSet {
             guard tools != oldValue else { return }
+            // Choosing a color, thickness or pen type leaves the favorite.
+            if tools.activeFavoriteID != nil, tools.activeFavoriteID == oldValue.activeFavoriteID,
+               tools.pen != oldValue.pen || tools.highlighter != oldValue.highlighter || tools.penStyle != oldValue.penStyle {
+                tools.activeFavoriteID = nil
+            }
             tools.save()
             canvas?.applyTool(tools)
         }
+    }
+
+    // MARK: - Favorite pens
+
+    var favorites: [FavoritePen] { tools.favorites ?? [] }
+
+    func useFavorite(_ fav: FavoritePen) {
+        if tools.tool != fav.tool { selectTool(fav.tool) }
+        var t = tools
+        t.activeFavoriteID = fav.id
+        tools = t
+        Haptics.tap()
+    }
+
+    /// Saves the pen or highlighter as it is now.
+    func saveCurrentAsFavorite() {
+        guard var setup = tools.currentSetup else {
+            showToast("Pick a pen or highlighter first")
+            return
+        }
+        if let existing = favorites.first(where: { $0.matches(setup) }) {
+            useFavorite(existing)
+            showToast("Already in favorites")
+            return
+        }
+        guard favorites.count < ToolState.maxFavorites else {
+            showToast("Favorites are full: press and hold one to remove it")
+            return
+        }
+        setup.id = UUID()
+        var t = tools
+        t.favorites = favorites + [setup]
+        t.activeFavoriteID = setup.id
+        tools = t
+        Haptics.success()
+        showToast("Saved to favorites")
+    }
+
+    func removeFavorite(_ id: UUID) {
+        var t = tools
+        t.favorites = favorites.filter { $0.id != id }
+        if t.activeFavoriteID == id { t.activeFavoriteID = nil }
+        tools = t
+    }
+
+    func moveFavorite(_ id: UUID, by offset: Int) {
+        var list = favorites
+        guard let i = list.firstIndex(where: { $0.id == id }) else { return }
+        let j = min(max(i + offset, 0), list.count - 1)
+        guard i != j else { return }
+        list.swapAt(i, j)
+        var t = tools
+        t.favorites = list
+        tools = t
     }
 
     var currentPage = 0
@@ -71,10 +130,24 @@ final class EditorModel {
     var errorMessage: String?
     var replayEnabled = true
     var showAudioBar = false {
+        didSet { if oldValue != showAudioBar { updateBottomInsets() } }
+    }
+    /// The zoom window: write magnified at the bottom, ink lands in a box on the page.
+    var showZoomWindow = false {
         didSet {
-            // The whiteboard minimap moves up to make room for the player.
-            if oldValue != showAudioBar { canvas?.setMiniMapBottomInset(showAudioBar ? 84 : 16) }
+            guard oldValue != showZoomWindow else { return }
+            if !showZoomWindow { canvas?.closeZoomWindow() }
+            updateBottomInsets()
         }
+    }
+
+    /// Room taken at the bottom by the audio player and the zoom window.
+    private func updateBottomInsets() {
+        let audio: CGFloat = showAudioBar ? 72 : 0
+        let zoom: CGFloat = showZoomWindow ? ZoomWindowPanel.height + 20 : 0
+        canvas?.setZoomPanelInset(zoom > 0 ? zoom + audio : 0)
+        // The canvas minimap stays above both.
+        canvas?.setMiniMapBottomInset(16 + audio + zoom)
     }
     var selectedRecordingID: UUID?
     var findQuery = ""

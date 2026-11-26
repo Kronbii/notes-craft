@@ -197,6 +197,15 @@ struct EditorScreen: View {
 
             if !compact {
                 Button {
+                    withAnimation(.spring(duration: 0.32)) { model.showZoomWindow.toggle() }
+                } label: {
+                    Image(systemName: "rectangle.bottomthird.inset.filled")
+                }
+                .buttonStyle(IconButtonStyle(isSelected: model.showZoomWindow))
+                .accessibilityLabel(model.showZoomWindow ? "Close zoom window" : "Zoom window")
+                .help("Write magnified; ink lands small and neat on the page")
+
+                Button {
                     toggleFind()
                 } label: {
                     Image(systemName: "magnifyingglass")
@@ -303,6 +312,11 @@ struct EditorScreen: View {
                         Label("Fit page width", systemImage: "arrow.left.and.right")
                     }
                 }
+                Toggle(isOn: Binding(get: { model.showZoomWindow }, set: { on in
+                    withAnimation(.spring(duration: 0.32)) { model.showZoomWindow = on }
+                })) {
+                    Label("Zoom window", systemImage: "rectangle.bottomthird.inset.filled")
+                }
                 Toggle(isOn: $model.rulerActive) {
                     Label("Ruler", systemImage: "ruler")
                 }
@@ -391,6 +405,15 @@ struct EditorScreen: View {
                         .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
                 .allowsHitTesting(false)
+            }
+            if model.showZoomWindow {
+                VStack {
+                    Spacer()
+                    ZoomWindowPanel(model: model)
+                        .padding(.horizontal, 12)
+                        .padding(.bottom, model.showAudioBar ? 82 : 10)
+                }
+                .transition(.move(edge: .bottom).combined(with: .opacity))
             }
             if model.showAudioBar {
                 VStack {

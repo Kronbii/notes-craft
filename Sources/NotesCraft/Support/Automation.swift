@@ -185,6 +185,7 @@ enum Tour {
         case "dark": return ["setup", "dark", "library", "editor-dark", "light"]
         case "board": return ["light", "board", "dark", "board-dark", "light"]
         case "stress": return ["light", "stress"]
+        case "features": return ["light", "features"]
         default: return ["setup", "light", "inklab", "library", "editor", "pdf", "board", "dark", "library-dark", "editor-dark", "board-dark", "light"]
         }
     }
@@ -210,6 +211,7 @@ enum Tour {
         case "inklab": await InkLab.run()
         case "board": await boardTour(dark: false)
         case "stress": await StressTest.run()
+        case "features": await FeatureTest.run()
         case "board-dark": await boardTour(dark: true)
         default: Automation.log("unknown step \(step)")
         }
