@@ -158,6 +158,8 @@ struct TranscriptPanel: View {
                 }
             }
             .listStyle(.plain)
+            // Keep the last lines clear of the audio player.
+            .contentMargins(.bottom, model.showAudioBar ? 90 : 0, for: .scrollContent)
             .onChange(of: current) { _, index in
                 guard let index else { return }
                 withAnimation(.easeOut(duration: 0.25)) { proxy.scrollTo(index, anchor: .center) }

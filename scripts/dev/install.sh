@@ -20,6 +20,7 @@ quit_app() {
   local cmd
   cmd=$(mktemp)
   printf '{"scenario":"quit"}' > "$cmd"
+  $AFC mkdir /Documents/Automation >/dev/null 2>&1 || true
   if ! $AFC put "$cmd" /Documents/Automation/command.json >/dev/null 2>&1; then rm -f "$cmd"; return; fi
   rm -f "$cmd"
   for _ in 1 2 3 4 5 6 7 8; do

@@ -150,8 +150,10 @@ final class ZoomWindowController: NSObject, PKCanvasViewDelegate {
         guard autoAdvance, let reach = added.map(\.renderBounds.maxX).max(), let page = pageFrame(containing: target) else { return }
         guard reach > target.minX + target.width * 0.78 else { return }
         let rightLimit = canvas?.isBoard == true ? CGFloat.greatestFiniteMagnitude : page.maxX - 24
-        if target.maxX + target.width * 0.5 <= rightLimit {
-            moveTarget(to: target.offsetBy(dx: target.width * 0.55, dy: 0), scroll: true)
+        // Slide along as far as the margin allows; at the margin, start a new line.
+        let room = rightLimit - target.maxX
+        if room > target.width * 0.15 {
+            moveTarget(to: target.offsetBy(dx: min(target.width * 0.55, room), dy: 0), scroll: true)
         } else {
             newLine()
         }

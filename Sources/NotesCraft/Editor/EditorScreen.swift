@@ -388,7 +388,7 @@ struct EditorScreen: View {
                         Spacer()
                     }
                     .padding(.leading, model.showNavigator ? (compact ? 166 : 216) : 16)
-                    .padding(.bottom, model.showAudioBar ? 84 : 16)
+                    .padding(.bottom, (model.showAudioBar ? 84 : 16) + (model.showZoomWindow ? ZoomWindowPanel.height + 10 : 0))
                 }
             }
             if let zoom = model.zoomBadge {
@@ -410,7 +410,7 @@ struct EditorScreen: View {
                         .padding(.horizontal, 18)
                         .padding(.vertical, 11)
                         .glassCapsule()
-                        .padding(.bottom, model.showAudioBar ? 90 : 60)
+                        .padding(.bottom, (model.showAudioBar ? 90 : 60) + (model.showZoomWindow ? ZoomWindowPanel.height + 10 : 0))
                         .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
                 .allowsHitTesting(false)

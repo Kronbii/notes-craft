@@ -128,6 +128,15 @@ enum FeatureTest {
         let far = stroke(in: CGRect(x: start.minX + start.width * 0.6, y: start.minY + start.height * 0.3, width: start.width * 0.3, height: start.height * 0.4))
         await useZoom(zoom) { $0.append(far) }
         check(zoom.target.minX > start.minX + 1, "\(label).zoom.autoAdvance", "\(start.minX) -> \(zoom.target.minX)")
+        // At the page's right margin, writing on goes to the next line.
+        if !c.isBoard {
+            for _ in 0 ..< 6 where zoom.target.minY <= start.minY + 1 {
+                let t = zoom.target
+                await useZoom(zoom) { $0.append(stroke(in: CGRect(x: t.minX + t.width * 0.6, y: t.minY + t.height * 0.3, width: t.width * 0.3, height: t.height * 0.4))) }
+            }
+            check(zoom.target.minY > start.minY + 1 && abs(zoom.target.minX - start.minX) < 1, "\(label).zoom.wrapsAtMargin", "\(start) -> \(zoom.target)")
+            zoom.moveTarget(to: start, scroll: false)
+        }
         zoom.newLine()
         await Automation.wait(0.3)
         check(zoom.target.minY > start.minY && abs(zoom.target.minX - start.minX) < 1, "\(label).zoom.newLine", "\(start) -> \(zoom.target)")

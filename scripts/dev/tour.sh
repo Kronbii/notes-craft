@@ -15,6 +15,7 @@ TIMEOUT="${2:-600}"
 
 before=$($AFC ls /Documents/Automation/out 2>/dev/null | sort || true)
 printf '{"scenario":"%s"}' "$SCENARIO" > "$TOOLS/command.json"
+$AFC mkdir /Documents/Automation >/dev/null 2>&1 || true
 $AFC put "$TOOLS/command.json" /Documents/Automation/command.json >/dev/null
 
 # Wait for a new run folder with a DONE marker.
