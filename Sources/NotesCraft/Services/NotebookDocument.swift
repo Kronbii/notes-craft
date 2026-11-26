@@ -266,7 +266,7 @@ final class NotebookDocument {
                 pdf: pdfByPage[page.id] ?? "",
                 ink: page.recognition?.text ?? ""
             )
-        })
+        }, transcripts: content.recordings.compactMap { $0.transcript?.text })
         search.set(entry, for: id)
     }
 

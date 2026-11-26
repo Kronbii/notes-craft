@@ -568,7 +568,7 @@ final class LibraryStore {
                 pdf: "",
                 ink: page.recognition?.text ?? ""
             )
-        })
+        }, transcripts: content.recordings.compactMap { $0.transcript?.text })
         search.set(entry, for: id)
         // PDF text
         var pdfPages: [String: [Page]] = [:]
