@@ -17,6 +17,12 @@ nonisolated struct FindResult: Identifiable, Hashable, Sendable {
     var rect: CGRect?
     /// Position within the page, for ordering.
     var order: Int
+    /// For a match in a recording's transcript: which recording, and when.
+    var recordingID: UUID?
+    var time: Double?
+
+    /// Matches in recordings sort after every page.
+    static let recordingsPageIndex = Int.max
 
     var snippet: String { before + match + after }
 }
@@ -150,6 +156,24 @@ nonisolated enum InlineSearcher {
                     let rect = CGRect(x: x0, y: line.rect.minY, width: w, height: line.rect.height).insetBy(dx: -4, dy: -2)
                     results.append(FindResult(pageIndex: i, pageID: page.id, source: .handwriting, before: b, match: m, after: a,
                                               rect: rect, order: Int(line.rect.minY * 10) * 1000 + li * 10 + n))
+                }
+            }
+        }
+        return results
+    }
+
+    /// Matches in what was said in recordings (their transcripts).
+    static func search(_ query: String, recordings: [Recording]) -> [FindResult] {
+        guard let regex = SearchMatching.regex(for: query) else { return [] }
+        var results: [FindResult] = []
+        for (r, recording) in recordings.enumerated() {
+            guard let transcript = recording.transcript else { continue }
+            for (n, segment) in transcript.segments.enumerated() {
+                for (k, range) in SearchMatching.ranges(of: regex, in: segment.text).enumerated() {
+                    let (b, m, a) = SearchMatching.snippet(segment.text, range: range)
+                    results.append(FindResult(pageIndex: FindResult.recordingsPageIndex, pageID: recording.id, source: .transcript,
+                                              before: b, match: m, after: a, rect: nil,
+                                              order: r * 10_000_000 + n * 100 + k, recordingID: recording.id, time: segment.start))
                 }
             }
         }

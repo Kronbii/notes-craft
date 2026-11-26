@@ -72,7 +72,7 @@ struct FindPanel: View {
                 VStack(spacing: 8) {
                     if model.findQuery.trimmingCharacters(in: .whitespaces).isEmpty {
                         Image(systemName: "text.magnifyingglass").font(.system(size: 30, weight: .light)).foregroundStyle(Theme.accent)
-                        Text("Search typed text, PDF text and your handwriting.")
+                        Text("Search typed text, PDF text, your handwriting and what was said in recordings.")
                     } else if !model.isSearching {
                         Text("No matches").font(Theme.serif(20)).foregroundStyle(Theme.ink)
                         Text("Handwriting becomes searchable a few seconds after you write it.")
@@ -94,7 +94,8 @@ struct FindPanel: View {
                                         .listRowBackground(item.offset == model.currentFindIndex ? Theme.accent.opacity(0.14) : Color.clear)
                                 }
                             } header: {
-                                Text("Page \(group.page + 1)").font(.caption.weight(.semibold)).foregroundStyle(Theme.ink3)
+                                Text(group.page == FindResult.recordingsPageIndex ? "Recordings" : "Page \(group.page + 1)")
+                                    .font(.caption.weight(.semibold)).foregroundStyle(Theme.ink3)
                             }
                         }
                     }
@@ -401,6 +402,25 @@ struct RecordingsSheet: View {
     @State private var renaming: Recording?
     @State private var renameText = ""
 
+    /// The transcript's state, under the recording's title.
+    @ViewBuilder
+    private func transcriptLine(_ rec: Recording) -> some View {
+        switch model.transcriptionStatus[rec.id] {
+        case .waiting?:
+            Text("Waiting to transcribe…").font(.caption).foregroundStyle(Theme.ink3)
+        case let .downloading(f)?:
+            Text("Getting the speech model… \(Int(f * 100))%").font(.caption).foregroundStyle(Theme.ink3)
+        case let .working(f)?:
+            Text("Transcribing… \(Int(f * 100))%").font(.caption).foregroundStyle(Theme.accent)
+        case let .failed(reason)?:
+            Text(reason).font(.caption).foregroundStyle(Theme.record).lineLimit(2)
+        case nil:
+            if let t = rec.transcript {
+                Text(t.text).font(.caption).foregroundStyle(Theme.ink2).lineLimit(1)
+            }
+        }
+    }
+
     var body: some View {
         NavigationStack {
             List {
@@ -421,8 +441,22 @@ struct RecordingsSheet: View {
                             Text("\(rec.duration.clock) · \(rec.createdAt.formatted(date: .abbreviated, time: .shortened))")
                                 .font(Theme.mono(11))
                                 .foregroundStyle(Theme.ink3)
+                            transcriptLine(rec)
                         }
                         Spacer()
+                        Button {
+                            model.selectedRecordingID = rec.id
+                            model.showTranscript = true
+                            if rec.transcript == nil, model.transcriptionStatus[rec.id] == nil { model.transcribe(rec.id) }
+                            dismiss()
+                        } label: {
+                            Image(systemName: "text.quote")
+                                .font(.system(size: 18, weight: .medium))
+                                .frame(width: 40, height: 40)
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(Theme.accent)
+                        .accessibilityLabel(rec.transcript == nil ? "Transcribe \(rec.title)" : "Show transcript of \(rec.title)")
                     }
                     .swipeActions {
                         Button(role: .destructive) {

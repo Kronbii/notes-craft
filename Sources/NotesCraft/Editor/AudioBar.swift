@@ -116,6 +116,20 @@ struct AudioBar: View {
             .accessibilityLabel("Playback speed")
 
             Button {
+                withAnimation(.spring(duration: 0.3)) { model.showTranscript.toggle() }
+            } label: {
+                ZStack(alignment: .topTrailing) {
+                    Image(systemName: "text.quote")
+                    if let id = recording?.id, model.transcriptionStatus[id] != nil {
+                        Circle().fill(Theme.accent).frame(width: 7, height: 7).offset(x: 4, y: -3)
+                    }
+                }
+            }
+            .buttonStyle(IconButtonStyle(isSelected: model.showTranscript, size: 34))
+            .accessibilityLabel(model.showTranscript ? "Hide transcript" : "Show transcript")
+            .help("What was said, as text")
+
+            Button {
                 model.setReplayEnabled(!model.replayEnabled)
             } label: {
                 Image(systemName: "pencil.and.scribble")

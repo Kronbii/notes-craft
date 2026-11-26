@@ -46,6 +46,11 @@ final class CanvasController: NSObject {
     var miniMap: BoardMiniMapView?
     /// Whiteboard dots or grid, drawn live for the current zoom.
     var boardPattern: BoardPatternLayer?
+    /// The zoom window (writing magnified) and its box on the page.
+    var zoomWindow: ZoomWindowController?
+    var zoomTargetView: ZoomTargetView?
+    /// Height the zoom window covers at the bottom.
+    var zoomPanelInset: CGFloat = 0
     var miniMapBottom: NSLayoutConstraint?
     /// Strokes that undo, redo or an edit took off the page. If the canvas
     /// reports one of them again, it is PencilKit's stale copy (see `reconcile`).
@@ -330,13 +335,14 @@ final class CanvasController: NSObject {
         updateVisiblePages(force: true)
         layoutOverlays()
         miniMap?.updateViewport()
+        layoutZoomTarget()
     }
 
     func updateInsets() {
         let contentSize = canvas.contentSize
         let insetX = max(0, (canvas.bounds.width - contentSize.width) / 2)
         let insetY = max(0, (canvas.bounds.height - contentSize.height) / 2)
-        let inset = UIEdgeInsets(top: insetY, left: insetX, bottom: insetY + keyboardInset, right: insetX)
+        let inset = UIEdgeInsets(top: insetY, left: insetX, bottom: insetY + max(keyboardInset, zoomPanelInset), right: insetX)
         if canvas.contentInset != inset { canvas.contentInset = inset }
     }
 
@@ -597,6 +603,7 @@ final class CanvasController: NSObject {
         isApplyingProgrammatic = true
         canvas.drawing = drawing
         isApplyingProgrammatic = false
+        zoomWindow?.syncFromMain()
     }
 
     /// What the canvas should show for the baseline (replay fades future ink).
@@ -725,6 +732,7 @@ final class CanvasController: NSObject {
         editor?.inkChanged(erased: lastDrawingTool == .eraser)
         editor?.scheduleSave()
         miniMap?.contentChanged()
+        zoomWindow?.syncFromMain()
     }
 
     /// Remembers strokes that left the notebook (erased, undone, replaced), so a
@@ -848,6 +856,7 @@ final class CanvasController: NSObject {
         let usesDrawing = tools.tool.usesCanvasDrawing && replayTime == nil
         if let pk = tools.pkTool(for: tools.tool) {
             canvas.tool = pk
+            zoomWindow?.applyTool(pk, fingerDraws: AppSettings.shared.drawWithFinger)
         }
         canvas.drawingGestureRecognizer.isEnabled = usesDrawing
         let fingerDraws = AppSettings.shared.drawWithFinger
