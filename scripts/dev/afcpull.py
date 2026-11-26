@@ -6,6 +6,7 @@ usage: afcpull.py BUNDLE_ID ls PATH
        afcpull.py BUNDLE_ID pull REMOTE_DIR LOCAL_DIR
        afcpull.py BUNDLE_ID rm PATH
        afcpull.py BUNDLE_ID put LOCAL_FILE REMOTE_PATH
+       afcpull.py BUNDLE_ID mkdir PATH
 """
 import ctypes
 import os
@@ -107,6 +108,8 @@ def main():
         print("pulled", pull(afc, sys.argv[3], sys.argv[4]), "files")
     elif cmd == "rm":
         print("rm", lib.afc_remove_path(afc, sys.argv[3].encode()))
+    elif cmd == "mkdir":
+        print("mkdir", lib.afc_make_directory(afc, sys.argv[3].encode()))
     elif cmd == "put":
         data = open(sys.argv[3], "rb").read()
         h = ctypes.c_uint64()

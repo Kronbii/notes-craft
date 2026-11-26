@@ -400,3 +400,41 @@ private func polyPoints(_ corners: [CGPoint], perEdge: Int = 20, jitter: Double 
         if pitch > 25 { #expect(pitch / 2 * z < 7.5) }
     }
 }
+
+// MARK: - Transcripts
+
+@Test func transcriptGroupsWordsIntoSentences() {
+    let words: [(text: String, start: Double, end: Double)] = [
+        ("Entropy", 0.0, 0.4), ("never", 0.45, 0.7), ("decreases.", 0.75, 1.2),
+        ("Heat", 1.5, 1.7), ("flows", 1.75, 2.0), ("from", 2.05, 2.2), ("hot", 2.25, 2.4),
+        ("to", 4.0, 4.1), ("cold", 4.15, 4.5),
+    ]
+    let segments = Transcript.segments(fromWords: words)
+    #expect(segments.map(\.text) == ["Entropy never decreases.", "Heat flows from hot", "to cold"])
+    #expect(segments[0].start == 0 && segments[0].end == 1.2)
+    #expect(segments[2].start == 4.0)
+}
+
+@Test func transcriptFindsSegmentPlaying() {
+    let t = Transcript(segments: [.init(start: 5, end: 8, text: "b"), .init(start: 0, end: 4, text: " a "), .init(start: 9, end: 12, text: "c"), .init(start: 3, end: 3, text: "  ")], locale: "en_US")
+    #expect(t.segments.map(\.text) == ["a", "b", "c"])
+    #expect(t.segmentIndex(at: -1) == nil)
+    #expect(t.segmentIndex(at: 0) == 0)
+    #expect(t.segmentIndex(at: 6) == 1)
+    #expect(t.segmentIndex(at: 8.5) == 1)
+    #expect(t.segmentIndex(at: 100) == 2)
+    #expect(t.text == "a b c")
+}
+
+@Test func recordingSurvivesDamagedTranscript() throws {
+    let rec = Recording(asset: "a.caf", title: "Lecture", createdAt: Date(timeIntervalSince1970: 1000), duration: 12, segments: [],
+                        transcript: Transcript(segments: [.init(start: 0, end: 2, text: "hello")], locale: "en_US"))
+    let data = try JSONEncoder().encode(rec)
+    #expect(try JSONDecoder().decode(Recording.self, from: data).transcript?.text == "hello")
+    var json = try JSONSerialization.jsonObject(with: data) as! [String: Any]
+    json["transcript"] = ["segments": "nonsense"]
+    let damaged = try JSONDecoder().decode(Recording.self, from: JSONSerialization.data(withJSONObject: json))
+    #expect(damaged.transcript == nil && damaged.title == "Lecture")
+    json.removeValue(forKey: "transcript")
+    #expect(try JSONDecoder().decode(Recording.self, from: JSONSerialization.data(withJSONObject: json)).transcript == nil)
+}

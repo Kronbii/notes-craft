@@ -6,6 +6,25 @@ All notable changes to NotesCraft are listed here. The format follows
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-11-26
+
+Three features from Notability and GoodNotes.
+
+### Added
+- **Transcripts of recordings.** When a recording stops, NotesCraft turns it into text on the iPad
+  (Apple's on-device speech engine; nothing is uploaded, the language model is downloaded from Apple
+  once). The transcript panel, opened from the audio player, highlights the sentence being played;
+  tap any sentence to hear it. Copy a transcript, or transcribe again in another language.
+  Find in a notebook and library search include what was said; a match plays from that moment.
+  Settings › Recordings turns this on or off and sets the language.
+- **Zoom window.** Write comfortably in a magnified strip at the bottom of the page; the ink lands
+  small and neat inside a box on the page, at its real thickness. Drag the box, nudge it, or start a
+  new line (it snaps to ruled lines). It moves along as you write and wraps at the margin.
+  1.5× to 4×; erasing, scribble-to-erase and undo work inside it. Opens from the toolbar or the ⋯ menu.
+- **Favorite pens.** Save the pen or highlighter you're using (type, color, thickness) and switch to
+  it with one tap from the favorites bar left of the tools. Press and hold a favorite to move or
+  remove it.
+
 ## [1.0.0] - 2026-11-26
 
 The first release.
@@ -41,5 +60,6 @@ The first release.
 - Light and dark appearance, multiple windows.
 - Settings › Help and feedback: report a problem, suggest a feature, copy diagnostics.
 
-[Unreleased]: https://github.com/Kronbii/notes-craft/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/Kronbii/notes-craft/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/Kronbii/notes-craft/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/Kronbii/notes-craft/releases/tag/v1.0.0

@@ -13,10 +13,12 @@ struct PageSearchText: Codable, Hashable {
 
 struct NotebookSearchText: Codable, Hashable {
     var pages: [PageSearchText]
+    /// Recording transcripts (absent in indexes saved before transcripts existed).
+    var transcripts: [String]?
 }
 
 enum SearchSource: String {
-    case title, typed, pdf, handwriting
+    case title, typed, pdf, handwriting, transcript
 
     var label: String {
         switch self {
@@ -24,6 +26,7 @@ enum SearchSource: String {
         case .typed: "Text"
         case .pdf: "PDF"
         case .handwriting: "Handwriting"
+        case .transcript: "Recording"
         }
     }
 
@@ -33,6 +36,7 @@ enum SearchSource: String {
         case .typed: "character.cursor.ibeam"
         case .pdf: "doc.richtext"
         case .handwriting: "pencil.and.scribble"
+        case .transcript: "waveform"
         }
     }
 }
@@ -125,6 +129,13 @@ final class SearchIndex {
                         perNotebook += 1
                         break
                     }
+                }
+            }
+            // One hit for what was said in the notebook's recordings.
+            for text in entry.transcripts ?? [] where !text.isEmpty {
+                if let (b, m, a) = hit(text) {
+                    hits.append(SearchHit(notebookID: nb.id, pageIndex: nil, source: .transcript, before: b, match: m, after: a))
+                    break
                 }
             }
         }

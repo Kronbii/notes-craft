@@ -47,6 +47,14 @@ struct EditorScreen: View {
                         .frame(width: compact ? 260 : 300)
                         .transition(.move(edge: .trailing).combined(with: .opacity))
                     }
+                    if model.showTranscript {
+                        Rectangle().fill(Theme.hair).frame(width: 0.5)
+                        TranscriptPanel(model: model, onClose: {
+                            withAnimation(.spring(duration: 0.3)) { model.showTranscript = false }
+                        })
+                        .frame(width: compact ? 280 : 320)
+                        .transition(.move(edge: .trailing).combined(with: .opacity))
+                    }
                 }
                 overlays
             }
@@ -54,6 +62,7 @@ struct EditorScreen: View {
         .background(Theme.desk.ignoresSafeArea())
         .background(Theme.background)
         .animation(.spring(duration: 0.32), value: model.showNavigator)
+        .animation(.spring(duration: 0.32), value: model.showTranscript)
         .animation(.spring(duration: 0.32), value: model.showAudioBar)
         .onChange(of: scenePhase) { _, phase in
             if phase != .active { model.saveForBackground() }
@@ -197,6 +206,15 @@ struct EditorScreen: View {
 
             if !compact {
                 Button {
+                    withAnimation(.spring(duration: 0.32)) { model.showZoomWindow.toggle() }
+                } label: {
+                    Image(systemName: "rectangle.bottomthird.inset.filled")
+                }
+                .buttonStyle(IconButtonStyle(isSelected: model.showZoomWindow))
+                .accessibilityLabel(model.showZoomWindow ? "Close zoom window" : "Zoom window")
+                .help("Write magnified; ink lands small and neat on the page")
+
+                Button {
                     toggleFind()
                 } label: {
                     Image(systemName: "magnifyingglass")
@@ -303,6 +321,11 @@ struct EditorScreen: View {
                         Label("Fit page width", systemImage: "arrow.left.and.right")
                     }
                 }
+                Toggle(isOn: Binding(get: { model.showZoomWindow }, set: { on in
+                    withAnimation(.spring(duration: 0.32)) { model.showZoomWindow = on }
+                })) {
+                    Label("Zoom window", systemImage: "rectangle.bottomthird.inset.filled")
+                }
                 Toggle(isOn: $model.rulerActive) {
                     Label("Ruler", systemImage: "ruler")
                 }
@@ -365,7 +388,7 @@ struct EditorScreen: View {
                         Spacer()
                     }
                     .padding(.leading, model.showNavigator ? (compact ? 166 : 216) : 16)
-                    .padding(.bottom, model.showAudioBar ? 84 : 16)
+                    .padding(.bottom, (model.showAudioBar ? 84 : 16) + (model.showZoomWindow ? ZoomWindowPanel.height + 10 : 0))
                 }
             }
             if let zoom = model.zoomBadge {
@@ -387,10 +410,19 @@ struct EditorScreen: View {
                         .padding(.horizontal, 18)
                         .padding(.vertical, 11)
                         .glassCapsule()
-                        .padding(.bottom, model.showAudioBar ? 90 : 60)
+                        .padding(.bottom, (model.showAudioBar ? 90 : 60) + (model.showZoomWindow ? ZoomWindowPanel.height + 10 : 0))
                         .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
                 .allowsHitTesting(false)
+            }
+            if model.showZoomWindow {
+                VStack {
+                    Spacer()
+                    ZoomWindowPanel(model: model)
+                        .padding(.horizontal, 12)
+                        .padding(.bottom, model.showAudioBar ? 82 : 10)
+                }
+                .transition(.move(edge: .bottom).combined(with: .opacity))
             }
             if model.showAudioBar {
                 VStack {

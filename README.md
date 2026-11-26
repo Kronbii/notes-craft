@@ -13,6 +13,8 @@ A free, open-source handwritten-notes app for iPad that combines the best of Goo
 - Scribble back and forth over writing to erase it (GoodNotes-style), as one undo step
 - Draw and hold to turn a stroke into a perfect line, circle, ellipse, rectangle or triangle, plus a dedicated shapes tool
 - Three favorite colors and three widths per tool, one tap away; tap a selected color or width again for the full palette
+- Favorite pens: save a pen or highlighter setup (type, color, thickness) and switch to it with one tap
+- Zoom window: write in a magnified strip at the bottom; the ink lands small and neat in a box on the page, moving along as you write
 - Lasso: move, resize, recolor, copy, cut, duplicate, delete, share as image, and convert handwriting to text
 - Text boxes with fonts, sizes, bold/italic/underline, colors, alignment and sticky-note fills
 - Photos, camera shots and pasted images on the page
@@ -32,11 +34,12 @@ A free, open-source handwritten-notes app for iPad that combines the best of Goo
 - Record lectures while you write; recording continues in the background
 - Playback replays your ink in sync: ink written later appears faded and darkens as the audio reaches it
 - Tap any ink to jump the audio to when it was written; 0.75× to 2× speed, skip ±15 s
+- Transcripts: recordings become text on the iPad (nothing is uploaded); tap a sentence to hear it, and search what was said
 
 **Library**
 - Folders and subfolders with colors, drag and drop, favorites, recents, audio notes, and a 30-day trash
 - Notebook covers in 14 colors and 6 patterns, or the first page as the cover
-- Search across titles, typed text, PDF text and handwriting (recognized on-device)
+- Search across titles, typed text, PDF text, handwriting (recognized on-device) and recording transcripts
 - Find inside a notebook with highlighted matches
 
 **Export and backup**

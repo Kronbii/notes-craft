@@ -284,14 +284,33 @@ public struct Recording: Codable, Hashable, Identifiable, Sendable {
     public var createdAt: Date
     public var duration: TimeInterval
     public var segments: [Segment]
+    /// What was said, once transcribed on the iPad.
+    public var transcript: Transcript?
 
-    public init(id: UUID = UUID(), asset: String, title: String, createdAt: Date, duration: TimeInterval, segments: [Segment]) {
+    public init(id: UUID = UUID(), asset: String, title: String, createdAt: Date, duration: TimeInterval, segments: [Segment], transcript: Transcript? = nil) {
         self.id = id
         self.asset = asset
         self.title = title
         self.createdAt = createdAt
         self.duration = duration
         self.segments = segments
+        self.transcript = transcript
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, asset, title, createdAt, duration, segments, transcript
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(UUID.self, forKey: .id)
+        asset = try c.decode(String.self, forKey: .asset)
+        title = try c.decode(String.self, forKey: .title)
+        createdAt = try c.decode(Date.self, forKey: .createdAt)
+        duration = try c.decode(TimeInterval.self, forKey: .duration)
+        segments = try c.decode([Segment].self, forKey: .segments)
+        // A damaged transcript must never take the recording down with it.
+        transcript = try? c.decodeIfPresent(Transcript.self, forKey: .transcript)
     }
 
     /// Position in the audio file that corresponds to a wall-clock moment, or nil
