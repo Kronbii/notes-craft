@@ -1,6 +1,8 @@
 # NotesCraft
 
-A free, open-source handwritten-notes app for iPad that combines the best of GoodNotes and Notability. Your notes stay on your iPad: no account, no cloud, nothing is sent anywhere.
+A handwritten-notes app for iPad that combines the best of GoodNotes and Notability, growing into a study companion for university students (starting with medical students in Lebanon).
+
+> **About this repository.** NotesCraft 1.0 and 1.1 are open source here under the MIT License, and stay that way. Development of the next versions continues privately. This page remains the home for releases, the roadmap, and your bug reports and ideas.
 
 **[Download the latest release](https://github.com/Kronbii/notes-craft/releases/latest)** · [What's new](CHANGELOG.md) · [Report a problem](https://github.com/Kronbii/notes-craft/issues/new/choose)
 
@@ -47,6 +49,15 @@ A free, open-source handwritten-notes app for iPad that combines the best of Goo
 - Print
 - One-tap full library backup to Files › On My iPad › NotesCraft › Backups (and weekly automatic backups), and restore
 - Multiple windows: open two notebooks side by side with Split View or Stage Manager
+
+## Coming next
+
+- **Study planner**: add your timetable, exams and deadlines; see how many study days and hours you really have before each exam, and get a day-by-day plan of what to study, around your classes and your Google, Outlook or iCloud calendar.
+- **Study tools**: turn a subject's lectures, slides, recordings and handwritten notes into flashcards (with spaced repetition and Anki export), summaries and mock exams.
+- **Communities**: university spaces (for example a medical school's class) to share notes, slides, past exams and decks, with posting limited to verified students.
+- **Shared notebooks**: work on the same notebook together, live.
+
+Have an idea or a must-have? [Suggest a feature](https://github.com/Kronbii/notes-craft/issues/new/choose).
 
 ## Install
 
